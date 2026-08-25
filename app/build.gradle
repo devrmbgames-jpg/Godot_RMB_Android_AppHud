@@ -1,23 +1,19 @@
 plugins {
-    id 'org.jetbrains.kotlin.android'
     id 'com.android.library'
-    id 'kotlin-android'
+    id 'org.jetbrains.kotlin.android'
 }
 
-
 android {
-
     namespace "com.dtho47.godot.apphud"
-    compileSdk = 34
-    buildToolsVersion = '34.0.0'
-
+    compileSdk = 36
+    buildToolsVersion = '35.0.0'
 
     defaultConfig {
         minSdk 26
-        versionCode 1
-        versionName "1.0.0"
+        targetSdk 36
+        versionCode 2
+        versionName "2.0.0"
     }
-
 
     buildTypes {
         release {
@@ -25,21 +21,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17
-    }
 
     def libName = project.property("library_name")
-
-    defaultConfig{
+    defaultConfig {
         buildConfigField "String", "LIBRARY_NAME", "\"$libName\""
     }
-
-    ndkVersion '23.2.8568313'
 
     libraryVariants.configureEach { variant ->
         variant.outputs.all { output ->
@@ -50,17 +41,35 @@ android {
     buildFeatures {
         buildConfig true
     }
-
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
+// Prefer the exact custom Godot engine AAR/JAR when it is present locally.
+// CI and clean clones fall back to the official Godot 3.6.2 Android AAR from Maven Central.
+// All Godot dependencies are compileOnly, so the Godot engine is never packaged into this plugin.
+def publicGodotCoordinate = 'org.godotengine:godot:3.6.2.stable'
+def releaseGodotLibraries = fileTree(dir: 'libs/release', include: ['godot-lib*.aar', 'godot-lib*.jar'])
+def debugGodotLibraries = fileTree(dir: 'libs/debug', include: ['godot-lib*.aar', 'godot-lib*.jar'])
 
 dependencies {
-    implementation 'com.apphud:ApphudSDK-Android:2.7.3'
+    implementation 'com.apphud:ApphudSDK-Android:3.4.2'
     implementation 'androidx.appcompat:appcompat:1.7.0'
-    
-    implementation 'com.android.billingclient:billing-ktx:7.1.1'
 
-    releaseCompileOnly fileTree(dir: 'libs/release', include: ['*.jar', '*.aar'])
-    debugCompileOnly fileTree(dir: 'libs/debug', include: ['*.jar', '*.aar'])
+    // Keep the same Billing generation Apphud 3.4.2 is built against.
+    implementation 'com.android.billingclient:billing-ktx:8.3.0'
 
+    if (!releaseGodotLibraries.files.isEmpty()) {
+        releaseCompileOnly releaseGodotLibraries
+    } else {
+        releaseCompileOnly publicGodotCoordinate
+    }
+
+    if (!debugGodotLibraries.files.isEmpty()) {
+        debugCompileOnly debugGodotLibraries
+    } else {
+        debugCompileOnly publicGodotCoordinate
+    }
 }
