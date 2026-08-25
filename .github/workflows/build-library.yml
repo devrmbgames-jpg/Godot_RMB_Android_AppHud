@@ -3,40 +3,61 @@ name: Build library artifact
 on:
   workflow_dispatch:
   push:
-    branches: [ 'main' ]
+    branches: [ 'master' ]
+  pull_request:
+    branches: [ 'master' ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Setup JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
       - name: Grant execute permissions for gradlew
         run: chmod +x gradlew
 
-      - name: Cache gradle dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Validate Billing and AAR metadata
+        run: ./gradlew :app:checkReleaseAarMetadata
 
       - name: Build artifact
         run: ./gradlew :app:assembleRelease
 
+      - name: Verify Godot public ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          unzip -q app/build/outputs/aar/GodotAppHud.release.aar -d "$tmp_dir"
+          javap -classpath "$tmp_dir/classes.jar" com.dtho47.godot.apphud.GodotAppHud > "$tmp_dir/api.txt"
+          cat "$tmp_dir/api.txt"
+
+          grep -Fq 'public final void start(java.lang.String, java.lang.String, boolean);' "$tmp_dir/api.txt"
+          grep -Fq 'public final void start_manual(java.lang.String, java.lang.String, java.lang.String, boolean);' "$tmp_dir/api.txt"
+          grep -Fq 'public final java.lang.String get_user_id();' "$tmp_dir/api.txt"
+          grep -Fq 'public final java.lang.String get_device_id();' "$tmp_dir/api.txt"
+          grep -Fq 'public final void track_purchase(java.lang.String, java.lang.String, java.lang.String, java.lang.String);' "$tmp_dir/api.txt"
+          grep -Fq 'public final void logout();' "$tmp_dir/api.txt"
+
+      - name: Verify Billing 8.3 resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:dependencyInsight \
+            --configuration releaseRuntimeClasspath \
+            --dependency com.android.billingclient:billing > billing-dependency.txt
+          cat billing-dependency.txt
+          grep -Fq 'com.android.billingclient:billing:8.3.0' billing-dependency.txt
+
       - name: Upload library package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Library package
-          path: app/build/outputs/aar/GodotGooglePlayGameServices.release.aar
+          name: GodotAppHud-release
+          path: app/build/outputs/aar/GodotAppHud.release.aar
