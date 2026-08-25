@@ -7,12 +7,13 @@ plugins {
 
 android {
 
-    namespace "com.dtho47.godot.billing"
+    namespace "com.dtho47.godot.apphud"
     compileSdk = 34
     buildToolsVersion = '34.0.0'
 
+
     defaultConfig {
-        minSdk 24
+        minSdk 26
         versionCode 1
         versionName "1.0.0"
     }
@@ -38,7 +39,7 @@ android {
         buildConfigField "String", "LIBRARY_NAME", "\"$libName\""
     }
 
-    ndkVersion '25.2.9519653'
+    ndkVersion '23.2.8568313'
 
     libraryVariants.configureEach { variant ->
         variant.outputs.all { output ->
@@ -54,10 +55,12 @@ android {
 
 
 dependencies {
-    implementation 'androidx.fragment:fragment-ktx:1.8.2'
-    //implementation 'com.github.akshaaatt:Google-IAP:1.7.0'
+    implementation 'com.apphud:ApphudSDK-Android:2.7.3'
     implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.android.billingclient:billing-ktx:7.0.0'
-    compileOnly fileTree(dir: "libs", include: ["*.jar", "*.aar"])
+    
+    implementation 'com.android.billingclient:billing-ktx:7.1.1'
+
+    releaseCompileOnly fileTree(dir: 'libs/release', include: ['*.jar', '*.aar'])
+    debugCompileOnly fileTree(dir: 'libs/debug', include: ['*.jar', '*.aar'])
 
 }
