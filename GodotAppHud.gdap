@@ -1,0 +1,9 @@
+[config]
+name="GodotAppHud"
+binary_type="local"
+binary="GodotAppHud.release.aar"
+
+[dependencies]
+local=[]
+remote=["androidx.appcompat:appcompat:1.7.0", "com.android.billingclient:billing-ktx:8.3.0", "com.apphud:ApphudSDK-Android:3.4.2"]
+custom_maven_repos=[]
